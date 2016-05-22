@@ -1,0 +1,108 @@
+# Created for "Introduction to Object Oriented Programming"
+# in the Hebrew University.
+# Authors: Alon Aviv, Michal Kessler
+# Date: June 2015
+
+=============================
+= Program description =
+============================= 
+
+  * This program implements a verifier for a simplified version
+  * of java (sjava).  The program receives a source file for a sjava
+  * file and prints 0 if the code is legal and 1 if the code is illegal.
+  * A Full description of the assignment is found in the pdf file, supplied
+  * by the course's staff.
+
+
+=============================
+= Contents =
+=============================
+
+# Main package:
+    1. oop/ex6/main/Sjavac.java
+
+# Table package:
+	1. Variable.java
+	2. VariableTable.java
+	3. MethodTable.java
+	4.TableAndScopeMaker.java
+	5-6. Exception classes
+	Validator package:
+	1. SyntaxValidator.java
+	2. SemanticsValidator.java
+	3-13. Various lineType stateMachines
+	14-15. Exception classes
+	
+# Line package:
+	1. Line.java
+	2. Tokenizer.java
+	3. TokenType.java
+	
+# README
+
+# ex6.pdf - Description of the assignment.
+
+============
+= Design =
+============
+
+The design splits the workflow into three main parts:
+1. Parsing the text into a set of predetermined tokens, representing a legal
+part of speech in sJava. This is done by the Tokenizer, which creates Lines of
+tokens.
+2. Syntactically validating each line. The rule of thumb for syntactic
+validation is whether there exists a file in which a given line is legal.
+Disregards any context considerations.
+3. Semantically validating each line. This is preceded by adding all declared
+variables and methods to VariableTable and MethodTable, which keeps track of
+scope and saves all the relevant data regarding any given variable or method.
+The semantics validator checks that any reference to a variable is legal, that
+calls to methods match the method signature, that methods and conditions are
+called in legal scopes, and more semantic demands.
+
+The design requires going over the file more than once, but this would have
+been necessary in some way, because all methods and all global variables must
+be known within methods, regardless of the line in which they were declared.
+
+===========================
+= Implementation details =
+===========================
+
+Implementation of Tokenizer:
+
+The tokenizer takes the list of token types that appear in the dedicated enum, each one having
+its own regex pattern that defines the token. The tokenizer first connects all these patterns into one big
+regex patterb, with each pattern appearing as an individual capture group. The tokenizer then, when asked to
+tokenize, goes over the line that is given to it and splits the line into token, using the created capture 
+groups. It then checks for each match that the matcher found which token type it fits, and creates a new
+Token object that holds the type of that token and, for the cases of a variable name or method name, the
+actual text that is the variable/method name. The tokenizer creates a line object for each line it is given,
+holding a list of the tokens that make up that line. This process is done for each line in the file.
+
+Implementation of Validators:
+In order to implement the validators, we used "StateMachines", of which
+there exists one for each LineType. (The line type is easily determined by
+the first token of each line; EG: VOID indicates a method declaration; STRING
+indicates a variable declaration. Empty lines are ignored following the
+first stage of parsing, and are not added to the list of lines that is
+created by the main function, and used by the semantics validator.
+The StateMachine has a function for validating syntax, which looks at the order
+of tokens, and determines whether it is a legal order. It has a function for
+validating semantics, which checks the necessary values, types, and scopes of
+variables or methods that are referred to. It assumes syntactic correctness, as
+an error would have occurred at an earlier point, had a crucial element of
+the line were missing.
+
+Implementation of Tables:
+
+The table and scope maker receives a line and if neccasary, adds a new method or variable to
+the relevant table. In these cases it finds all the variables that need to be created (also if these appear
+as parameters in a method decleration) and adds them, according to thier type, name, and final modifier.
+The same happens with methods that need to be added with thier name and list of parameters. 
+The table and scope maker also keeps track of the current scope within the file, and updates it every time
+it encounters an opening and closing bracket. The current scope is given to the newly created objects added
+to the tables.
+
+The tables are hash maps that map a name to a Variable or Method object. 
+Since there can be several variables with the same name, the variable table holds for each name a list
+of variable objects for that name, each variable object of a different type.
